@@ -245,6 +245,9 @@ body {
   justify-content: center;
   z-index: 10;
 }
+.modal-backdrop.top {
+  z-index: 20;
+}
 .modal {
   width: 100%;
   background: #0f172a;
@@ -300,6 +303,11 @@ body {
   color: #fff;
 }
 .primary:disabled { opacity: .5; }
+.form-error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #fca5a5;
+}
 .chip-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .chip {
   padding: 6px 10px;

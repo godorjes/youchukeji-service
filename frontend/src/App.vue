@@ -125,7 +125,7 @@
         </div>
       </div>
 
-      <div v-if="showNewCard" class="modal-backdrop" @click.self="closeNewCard">
+      <div v-if="showNewCard" class="modal-backdrop top" @click.self="closeNewCard">
         <div class="modal">
           <div class="modal-header">
             <h3>新建卡片</h3>
@@ -152,7 +152,7 @@
         </div>
       </div>
 
-      <div v-if="showNewScene" class="modal-backdrop" @click.self="closeNewScene">
+      <div v-if="showNewScene" class="modal-backdrop top" @click.self="closeNewScene">
         <div class="modal">
           <div class="modal-header">
             <h3>新建场景</h3>
@@ -193,7 +193,7 @@
         </div>
       </div>
 
-      <div v-if="showNewTag" class="modal-backdrop" @click.self="closeNewTag">
+      <div v-if="showNewTag" class="modal-backdrop top" @click.self="closeNewTag">
         <div class="modal">
           <div class="modal-header">
             <h3>新建标签</h3>
@@ -213,7 +213,8 @@
                 {{ opt.name }}
               </button>
             </div>
-            <button class="primary" :disabled="!newTagName" @click="createTag">创建标签</button>
+            <button class="primary" :disabled="!isNewTagValid" @click="createTag">创建标签</button>
+            <div v-if="newTagError" class="form-error">{{ newTagError }}</div>
           </div>
         </div>
       </div>
@@ -279,6 +280,7 @@ export default {
       newScenePinned: false,
       newTagName: '',
       newTagColor: 'bg-blue-500',
+      newTagError: '',
       selectedTagFilter: null,
       emojiOptions: ['🚪', '✈️', '💼', '🏃', '🌴', '🎒', '🏕️', '🎉', '📌', '📦', '🎧', '🧳', '🚲', '🧼', '📷'],
       tagColorOptions: [
@@ -315,6 +317,9 @@ export default {
       return this.cardsPage.records.filter(
         (c) => !this.selectedTagFilter || c.tags.some((t) => t.id === this.selectedTagFilter)
       );
+    },
+    isNewTagValid() {
+      return this.newTagName.trim().length > 0;
     }
   },
   mounted() {
@@ -382,11 +387,15 @@ export default {
     },
     openNewTag() {
       this.closeCreateMenu();
+      this.newTagName = '';
+      this.newTagColor = 'bg-blue-500';
+      this.newTagError = '';
       this.showNewTag = true;
     },
     closeNewTag() {
       this.showNewTag = false;
       this.newTagName = '';
+      this.newTagError = '';
     },
     openTagView() {
       this.showTagView = true;
@@ -409,7 +418,13 @@ export default {
       this.selectedTagFilter = this.selectedTagFilter === id ? null : id;
     },
     async createTag() {
-      await api.createTag({ name: this.newTagName, color: this.newTagColor });
+      const name = this.newTagName.trim();
+      if (!name) {
+        this.newTagError = '请输入标签名称';
+        return;
+      }
+      this.newTagError = '';
+      await api.createTag({ name, color: this.newTagColor });
       this.closeNewTag();
       await this.refreshAll();
     },
