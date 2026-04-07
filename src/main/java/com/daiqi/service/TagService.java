@@ -15,6 +15,7 @@ import com.daiqi.exception.NotFoundException;
 import com.daiqi.mapper.CardMapper;
 import com.daiqi.mapper.SceneMapper;
 import com.daiqi.mapper.TagMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;

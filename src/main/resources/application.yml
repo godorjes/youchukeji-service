@@ -22,4 +22,12 @@ mybatis-plus:
 
 logging:
   level:
-    org.hibernate.SQL: warn
+    root: info
+    com.daiqi: debug
+    org.mybatis: debug
+    org.springframework.jdbc: debug
+  file:
+    name: F:/code/daiqi/logs/app.log
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"

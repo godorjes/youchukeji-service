@@ -3,18 +3,17 @@ package com.daiqi.controller;
 import java.util.List;
 
 import com.daiqi.dto.CheckRequest;
+import com.daiqi.dto.SceneCardCheckRequest;
 import com.daiqi.dto.SceneCardResponse;
 import com.daiqi.dto.SceneDetailResponse;
+import com.daiqi.dto.SceneIdRequest;
 import com.daiqi.dto.SceneRequest;
 import com.daiqi.dto.SceneResponse;
+import com.daiqi.dto.SceneUpdateRequest;
 import com.daiqi.service.SceneService;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -30,48 +29,54 @@ public class SceneController {
         this.sceneService = sceneService;
     }
 
-    @GetMapping
-    public List<SceneResponse> list() {
+    @PostMapping("/list")
+    public List<SceneResponse> list(@RequestBody(required = false) Object body) {
         return sceneService.listScenes();
     }
 
-    @GetMapping("/{id}")
-    public SceneDetailResponse get(@PathVariable Long id) {
-        return sceneService.getScene(id);
+    @PostMapping("/get")
+    public SceneDetailResponse get(@Validated @RequestBody SceneIdRequest request) {
+        return sceneService.getScene(request.getId());
     }
 
-    @GetMapping("/{id}/cards")
-    public List<SceneCardResponse> cards(@PathVariable Long id) {
-        return sceneService.getSceneCards(id);
+    @PostMapping("/cards")
+    public List<SceneCardResponse> cards(@Validated @RequestBody SceneIdRequest request) {
+        return sceneService.getSceneCards(request.getId());
     }
 
-    @PostMapping
+    @PostMapping("/create")
     @ResponseStatus(HttpStatus.CREATED)
     public SceneDetailResponse create(@Validated @RequestBody SceneRequest request) {
         return sceneService.createScene(request);
     }
 
-    @PutMapping("/{id}")
-    public SceneDetailResponse update(@PathVariable Long id, @Validated @RequestBody SceneRequest request) {
-        return sceneService.updateScene(id, request);
+    @PostMapping("/update")
+    public SceneDetailResponse update(@Validated @RequestBody SceneUpdateRequest request) {
+        SceneRequest payload = new SceneRequest();
+        payload.setName(request.getName());
+        payload.setIcon(request.getIcon());
+        payload.setPinned(request.getPinned());
+        payload.setTagIds(request.getTagIds());
+        return sceneService.updateScene(request.getId(), payload);
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/delete")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
-        sceneService.deleteScene(id);
+    public void delete(@Validated @RequestBody SceneIdRequest request) {
+        sceneService.deleteScene(request.getId());
     }
 
-    @PutMapping("/{id}/cards/{cardId}/check")
+    @PostMapping("/check")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void setCheck(@PathVariable Long id, @PathVariable Long cardId,
-                         @Validated @RequestBody CheckRequest request) {
-        sceneService.setCheck(id, cardId, request);
+    public void setCheck(@Validated @RequestBody SceneCardCheckRequest request) {
+        CheckRequest payload = new CheckRequest();
+        payload.setChecked(request.getChecked());
+        sceneService.setCheck(request.getSceneId(), request.getCardId(), payload);
     }
 
-    @DeleteMapping("/{id}/checks")
+    @PostMapping("/reset")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void resetChecks(@PathVariable Long id) {
-        sceneService.resetChecks(id);
+    public void resetChecks(@Validated @RequestBody SceneIdRequest request) {
+        sceneService.resetChecks(request.getId());
     }
 }
