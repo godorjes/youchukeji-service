@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Param;
 
 public interface CardTagMapper {
 
-    int deleteByCardId(Long cardId);
+    int deleteByCardId(@Param("cardId") Long cardId);
 
     int insertCardTags(@Param("cardId") Long cardId, @Param("tagIds") List<Long> tagIds);
 }

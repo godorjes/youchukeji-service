@@ -2,16 +2,15 @@ package com.daiqi.controller;
 
 import java.util.List;
 
+import com.daiqi.dto.TagIdRequest;
 import com.daiqi.dto.TagRequest;
 import com.daiqi.dto.TagResponse;
+import com.daiqi.dto.TagUpdateRequest;
 import com.daiqi.service.TagService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -27,25 +26,28 @@ public class TagController {
         this.tagService = tagService;
     }
 
-    @GetMapping
-    public List<TagResponse> list() {
+    @PostMapping("/list")
+    public List<TagResponse> list(@RequestBody(required = false) Object body) {
         return tagService.getAllTags();
     }
 
-    @PostMapping
+    @PostMapping("/create")
     @ResponseStatus(HttpStatus.CREATED)
     public TagResponse create(@Validated @RequestBody TagRequest request) {
         return tagService.createTag(request);
     }
 
-    @PutMapping("/{id}")
-    public TagResponse update(@PathVariable Long id, @Validated @RequestBody TagRequest request) {
-        return tagService.updateTag(id, request);
+    @PostMapping("/update")
+    public TagResponse update(@Validated @RequestBody TagUpdateRequest request) {
+        TagRequest payload = new TagRequest();
+        payload.setName(request.getName());
+        payload.setColor(request.getColor());
+        return tagService.updateTag(request.getId(), payload);
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/delete")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
-        tagService.deleteTag(id);
+    public void delete(@Validated @RequestBody TagIdRequest request) {
+        tagService.deleteTag(request.getId());
     }
 }
