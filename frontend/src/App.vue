@@ -16,7 +16,7 @@
               <p>用标签组合场景，告别层级结构</p>
             </div>
             <button class="icon-btn" @click="openTagView">
-              <span class="icon">???</span>
+              <span class="icon">🏷️</span>
             </button>
           </header>
 
@@ -31,7 +31,7 @@
                 <div class="emoji">{{ scene.icon }}</div>
                 <div class="title">{{ scene.name }}</div>
                 <div class="sub">{{ scene.checkedCount }}/{{ scene.totalCount }} 已确认</div>
-                <span class="pin">??</span>
+                <button class="pin pin-btn" @click.stop="togglePin(scene)">📌</button>
               </button>
             </div>
           </section>
@@ -49,7 +49,8 @@
                   <div class="sub">{{ tagNames(scene.tags) }}</div>
                 </div>
                 <div class="count">{{ scene.checkedCount }}/{{ scene.totalCount }}</div>
-                <span class="chevron">?</span>
+                <span class="chevron">›</span>
+                <button class="pin-btn pin-inline" @click.stop="togglePin(scene)">📌</button>
               </button>
             </div>
           </section>
@@ -72,8 +73,8 @@
 
         <div v-if="currentView === 'scene'" class="view">
           <header class="header scene-header">
-            <button class="icon-btn" @click="backHome">?</button>
-            <button class="icon-btn" @click="resetChecks">?</button>
+            <button class="icon-btn" @click="backHome">‹</button>
+            <button class="icon-btn" @click="resetChecks">⟲</button>
           </header>
           <div class="scene-info">
             <div class="emoji big">{{ selectedScene.icon }}</div>
@@ -94,7 +95,7 @@
 
           <div class="cards">
             <button v-for="card in sceneCards" :key="card.id" class="check-item" :class="{ done: card.checked }" @click="toggleCheck(card)">
-              <div class="check-circle">{{ card.checked ? '?' : '' }}</div>
+              <div class="check-circle">{{ card.checked ? '✓' : '' }}</div>
               <span class="card-title">{{ card.title }}</span>
               <div class="pill-dots">
                 <span v-for="tag in card.tags" :key="tag.id" class="dot" :class="tag.color"></span>
@@ -105,16 +106,16 @@
       </div>
 
       <div v-if="currentView === 'home' && !anyModal" class="bottom-nav">
-        <button class="nav-btn active">??<span>场景</span></button>
+        <button class="nav-btn active">🏠<span>场景</span></button>
         <button class="fab" @click="openCreateMenu">＋</button>
-        <button class="nav-btn" @click="openTagView">???<span>标签</span></button>
+        <button class="nav-btn" @click="openTagView">🏷️<span>标签</span></button>
       </div>
 
       <div v-if="showCreateMenu" class="modal-backdrop" @click.self="closeCreateMenu">
         <div class="modal">
           <div class="modal-header">
             <h3>新建</h3>
-            <button class="icon-btn" @click="closeCreateMenu">?</button>
+            <button class="icon-btn" @click="closeCreateMenu">✕</button>
           </div>
           <div class="modal-list">
             <button @click="openNewScene">新建场景<span>组合标签创建使用场景</span></button>
@@ -128,7 +129,7 @@
         <div class="modal">
           <div class="modal-header">
             <h3>新建卡片</h3>
-            <button class="icon-btn" @click="closeNewCard">?</button>
+            <button class="icon-btn" @click="closeNewCard">✕</button>
           </div>
           <div class="form">
             <label>卡片名称</label>
@@ -141,7 +142,7 @@
                 :class="['chip', selectedNewCardTags.includes(tag.id) ? tag.color : '']"
                 @click="toggleNewCardTag(tag.id)"
               >
-                <span v-if="selectedNewCardTags.includes(tag.id)">?</span>{{ tag.name }}
+                <span v-if="selectedNewCardTags.includes(tag.id)">✓</span>{{ tag.name }}
               </button>
             </div>
             <button class="primary" :disabled="!newCardTitle || !selectedNewCardTags.length" @click="createCard">
@@ -155,7 +156,7 @@
         <div class="modal">
           <div class="modal-header">
             <h3>新建场景</h3>
-            <button class="icon-btn" @click="closeNewScene">?</button>
+            <button class="icon-btn" @click="closeNewScene">✕</button>
           </div>
           <div class="form">
             <label>选择图标</label>
@@ -179,7 +180,7 @@
                 :class="['chip', selectedNewSceneTags.includes(tag.id) ? tag.color : '']"
                 @click="toggleNewSceneTag(tag.id)"
               >
-                <span v-if="selectedNewSceneTags.includes(tag.id)">?</span>{{ tag.name }}
+                <span v-if="selectedNewSceneTags.includes(tag.id)">✓</span>{{ tag.name }}
               </button>
             </div>
             <label class="switch-row">
@@ -196,7 +197,7 @@
         <div class="modal">
           <div class="modal-header">
             <h3>新建标签</h3>
-            <button class="icon-btn" @click="closeNewTag">?</button>
+            <button class="icon-btn" @click="closeNewTag">✕</button>
           </div>
           <div class="form">
             <label>标签名称</label>
@@ -222,8 +223,8 @@
           <div class="modal-header">
             <h3>标签管理</h3>
             <div class="right-actions">
-              <button class="ghost" @click="openNewTag">新标签</button>
-              <button class="icon-btn" @click="closeTagView">?</button>
+              <button class="new-tag-btn" @click="openNewTag">＋ 新标签</button>
+              <button class="icon-btn" @click="closeTagView">✕</button>
             </div>
           </div>
           <div class="tag-filter">
@@ -273,13 +274,13 @@ export default {
       newCardTitle: '',
       selectedNewCardTags: [],
       newSceneName: '',
-      newSceneIcon: '??',
+      newSceneIcon: '🎒',
       selectedNewSceneTags: [],
       newScenePinned: false,
       newTagName: '',
       newTagColor: 'bg-blue-500',
       selectedTagFilter: null,
-      emojiOptions: ['??', '??', '??', '??', '??', '??', '???', '??', '??', '??', '??', '??', '??', '??', '??'],
+      emojiOptions: ['🚪', '✈️', '💼', '🏃', '🌴', '🎒', '🏕️', '🎉', '📌', '📦', '🎧', '🧳', '🚲', '🧼', '📷'],
       tagColorOptions: [
         { name: '蓝色', value: 'bg-blue-500' },
         { name: '紫色', value: 'bg-purple-500' },
@@ -436,6 +437,17 @@ export default {
       if (!this.selectedScene) return;
       await api.resetChecks(this.selectedScene.id);
       await this.openScene({ id: this.selectedScene.id });
+      await this.fetchScenes();
+    },
+    async togglePin(scene) {
+      const payload = {
+        id: scene.id,
+        name: scene.name,
+        icon: scene.icon,
+        pinned: !scene.pinned,
+        tagIds: (scene.tags || []).map((t) => t.id)
+      };
+      await api.updateScene(payload);
       await this.fetchScenes();
     }
   }
