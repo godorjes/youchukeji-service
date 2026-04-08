@@ -26,13 +26,13 @@
             <button v-if="sceneSearch" class="search-clear" @click="sceneSearch = ''">✕</button>
           </div>
 
-          <template v-if="filteredScenes !== null">
+          <template v-if="searchResults !== null">
             <section class="section">
               <div class="section-title">
-                <span>搜索结果 · {{ filteredScenes.length }} 个</span>
+                <span>搜索结果 · {{ searchResults.records.length }} 个</span>
               </div>
-              <div v-if="filteredScenes.length" class="list">
-                <button v-for="scene in filteredScenes" :key="scene.id" class="list-item" @click="openScene(scene)">
+              <div v-if="searchResults.records.length" class="list">
+                <button v-for="scene in searchResults.records" :key="scene.id" class="list-item" @click="openScene(scene)">
                   <div class="emoji small">{{ scene.icon }}</div>
                   <div class="list-main">
                     <div class="title">{{ scene.name }}</div>
@@ -47,13 +47,13 @@
           </template>
 
           <template v-else>
-            <section v-if="pinnedScenes.length" class="section">
+            <section v-if="scenePinned.length" class="section">
               <div class="section-title">
                 <span class="dot yellow"></span>
                 <span>置顶场景</span>
               </div>
               <div class="grid">
-                <button v-for="scene in pinnedScenes" :key="scene.id" class="card" @click="openScene(scene)">
+                <button v-for="scene in scenePinned" :key="scene.id" class="card" @click="openScene(scene)">
                   <div class="progress" :style="{ width: percent(scene) + '%' }"></div>
                   <div class="emoji">{{ scene.icon }}</div>
                   <div class="title">{{ scene.name }}</div>
@@ -63,13 +63,13 @@
               </div>
             </section>
 
-            <section v-if="otherScenes.length" class="section">
+            <section v-if="sceneOthers.records.length || sceneOthers.total > 0" class="section">
               <div class="section-title">
                 <span class="dot gray"></span>
                 <span>其他场景</span>
               </div>
               <div class="list">
-                <button v-for="scene in visibleOtherScenes" :key="scene.id" class="list-item" @click="openScene(scene)">
+                <button v-for="scene in sceneOthers.records" :key="scene.id" class="list-item" @click="openScene(scene)">
                   <div class="emoji small">{{ scene.icon }}</div>
                   <div class="list-main">
                     <div class="title">{{ scene.name }}</div>
@@ -80,18 +80,14 @@
                   <button class="pin-btn pin-inline" @click.stop="togglePin(scene)">📌</button>
                 </button>
               </div>
-              <button v-if="otherScenes.length > 4 && !scenesExpanded" class="expand-btn" @click="scenesExpanded = true">
-                查看全部 {{ otherScenes.length }} 个场景
-                <span class="expand-arrow">↓</span>
-              </button>
-              <button v-if="scenesExpanded && otherScenes.length > 4" class="expand-btn" @click="scenesExpanded = false">
-                收起
-                <span class="expand-arrow collapse">↑</span>
+              <button v-if="othersRemaining > 0" class="expand-btn" :disabled="sceneOthersLoading" @click="loadMoreScenes">
+                {{ sceneOthersLoading ? '加载中...' : `加载更多 · 还剩 ${othersRemaining} 个` }}
+                <span v-if="!sceneOthersLoading" class="expand-arrow">↓</span>
               </button>
             </section>
           </template>
 
-          <section v-if="filteredScenes === null" class="section">
+          <section v-if="searchResults === null" class="section">
             <div class="section-title">
               <span class="dot gray"></span>
               <span>最近卡片</span>
@@ -301,10 +297,13 @@ export default {
       batteryLevel: 75,
       currentView: 'home',
       sceneSearch: '',
-      scenesExpanded: false,
+      searchResults: null,
+      searchLoading: false,
+      scenePinned: [],
+      sceneOthers: { records: [], total: 0, page: 0, size: 8 },
+      sceneOthersLoading: false,
       tags: [],
       cardsPage: { records: [], total: 0, totalPages: 0, page: 1, size: 20 },
-      scenes: [],
       selectedScene: null,
       sceneCards: [],
       showCreateMenu: false,
@@ -338,20 +337,8 @@ export default {
     };
   },
   computed: {
-    pinnedScenes() {
-      return this.scenes.filter((s) => s.pinned);
-    },
-    otherScenes() {
-      return this.scenes.filter((s) => !s.pinned);
-    },
-    filteredScenes() {
-      const q = this.sceneSearch.trim().toLowerCase();
-      if (!q) return null;
-      return this.scenes.filter((s) => s.name.toLowerCase().includes(q));
-    },
-    visibleOtherScenes() {
-      if (this.scenesExpanded) return this.otherScenes;
-      return this.otherScenes.slice(0, 4);
+    othersRemaining() {
+      return Math.max(0, this.sceneOthers.total - this.sceneOthers.records.length);
     },
     anyModal() {
       return this.showCreateMenu || this.showNewCard || this.showNewScene || this.showNewTag || this.showTagView;
@@ -369,6 +356,16 @@ export default {
     },
     isNewTagValid() {
       return this.newTagName.trim().length > 0;
+    }
+  },
+  watch: {
+    sceneSearch(val) {
+      clearTimeout(this._searchTimer);
+      if (!val.trim()) {
+        this.searchResults = null;
+        return;
+      }
+      this._searchTimer = setTimeout(() => this.doSearch(val), 300);
     }
   },
   mounted() {
@@ -398,7 +395,7 @@ export default {
       } catch (e) { /* keep default */ }
     },
     async refreshAll() {
-      await Promise.all([this.fetchTags(), this.fetchScenes(), this.fetchCards()]);
+      await Promise.all([this.fetchTags(), this.fetchScenes(1), this.fetchCards()]);
     },
     async fetchTags() {
       const res = await api.tags();
@@ -408,9 +405,37 @@ export default {
       const res = await api.cards(Object.assign({ page: 1, size: 100 }, params));
       this.cardsPage = res.data || { records: [], total: 0, totalPages: 0, page: 1, size: 100 };
     },
-    async fetchScenes() {
-      const res = await api.scenes();
-      this.scenes = res.data || [];
+    async fetchScenes(page = 1) {
+      const res = await api.scenes({ page, size: this.sceneOthers.size });
+      const data = res.data || {};
+      this.scenePinned = data.pinned || [];
+      if (page === 1) {
+        this.sceneOthers.records = data.records || [];
+      } else {
+        this.sceneOthers.records = [...this.sceneOthers.records, ...(data.records || [])];
+      }
+      this.sceneOthers.total = data.total || 0;
+      this.sceneOthers.page = data.page || page;
+    },
+    async loadMoreScenes() {
+      if (this.sceneOthersLoading) return;
+      this.sceneOthersLoading = true;
+      try {
+        await this.fetchScenes(this.sceneOthers.page + 1);
+      } finally {
+        this.sceneOthersLoading = false;
+      }
+    },
+    async doSearch(keyword) {
+      this.searchLoading = true;
+      try {
+        const res = await api.scenes({ keyword, page: 1, size: 20 });
+        const data = res.data || {};
+        const all = [...(data.pinned || []), ...(data.records || [])];
+        this.searchResults = { records: all, total: all.length };
+      } finally {
+        this.searchLoading = false;
+      }
     },
     async openScene(scene) {
       const detail = await api.scene(scene.id);
@@ -424,7 +449,7 @@ export default {
       this.selectedScene = null;
       this.sceneCards = [];
       this.sceneSearch = '';
-      this.scenesExpanded = false;
+      this.searchResults = null;
     },
     percent(scene) {
       if (!scene.totalCount) return 0;
@@ -514,7 +539,7 @@ export default {
         tagIds: this.selectedNewSceneTags
       });
       this.closeNewScene();
-      await this.fetchScenes();
+      await this.fetchScenes(1);
     },
     async toggleCheck(card) {
       card.checked = !card.checked;
@@ -536,7 +561,7 @@ export default {
         tagIds: (scene.tags || []).map((t) => t.id)
       };
       await api.updateScene(payload);
-      await this.fetchScenes();
+      await this.fetchScenes(1);
     }
   }
 };

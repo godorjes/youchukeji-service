@@ -7,6 +7,24 @@
     from scene_tag where tag_id = #{tagId}
   </select>
 
+  <select id="selectOthersPage" resultType="com.daiqi.entity.Scene">
+    select * from scene
+    where pinned = false
+    <if test="keyword != null and keyword != ''">
+      and name like concat('%', #{keyword}, '%')
+    </if>
+    order by id
+    limit #{size} offset #{offset}
+  </select>
+
+  <select id="countOthers" resultType="long">
+    select count(1) from scene
+    where pinned = false
+    <if test="keyword != null and keyword != ''">
+      and name like concat('%', #{keyword}, '%')
+    </if>
+  </select>
+
   <select id="selectTagsBySceneIds" resultType="com.daiqi.dto.SceneTagRow">
     select st.scene_id as sceneId, t.id as tagId, t.name, t.color
     from tag t join scene_tag st on t.id = st.tag_id

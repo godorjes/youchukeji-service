@@ -7,8 +7,9 @@ import com.daiqi.dto.SceneCardCheckRequest;
 import com.daiqi.dto.SceneCardResponse;
 import com.daiqi.dto.SceneDetailResponse;
 import com.daiqi.dto.SceneIdRequest;
+import com.daiqi.dto.SceneListRequest;
+import com.daiqi.dto.SceneListResponse;
 import com.daiqi.dto.SceneRequest;
-import com.daiqi.dto.SceneResponse;
 import com.daiqi.dto.SceneUpdateRequest;
 import com.daiqi.service.SceneService;
 import org.springframework.http.HttpStatus;
@@ -30,8 +31,9 @@ public class SceneController {
     }
 
     @PostMapping("/list")
-    public List<SceneResponse> list(@RequestBody(required = false) Object body) {
-        return sceneService.listScenes();
+    public SceneListResponse list(@RequestBody(required = false) SceneListRequest request) {
+        if (request == null) request = new SceneListRequest();
+        return sceneService.listScenes(request);
     }
 
     @PostMapping("/get")

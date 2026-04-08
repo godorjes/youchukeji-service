@@ -12,6 +12,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.daiqi.dto.CheckRequest;
 import com.daiqi.dto.SceneCardResponse;
 import com.daiqi.dto.SceneDetailResponse;
+import com.daiqi.dto.SceneListRequest;
+import com.daiqi.dto.SceneListResponse;
 import com.daiqi.dto.SceneRequest;
 import com.daiqi.dto.SceneResponse;
 import com.daiqi.dto.SceneTagRow;
@@ -28,7 +30,6 @@ import com.daiqi.mapper.SceneMapper;
 import com.daiqi.mapper.SceneTagMapper;
 import com.daiqi.mapper.TagMapper;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,20 +53,44 @@ public class SceneService {
         this.checkMapper = checkMapper;
     }
 
-    @Cacheable(cacheNames = "scenes")
     @Transactional(readOnly = true)
-    public List<SceneResponse> listScenes() {
-        List<Scene> scenes = sceneMapper.selectList(new QueryWrapper<Scene>().orderByAsc("id"));
-        List<SceneResponse> results = new ArrayList<>();
-        if (scenes.isEmpty()) {
-            return results;
-        }
-        List<Long> sceneIds = new ArrayList<>();
-        for (Scene scene : scenes) {
-            sceneIds.add(scene.getId());
-        }
-        Map<Long, List<TagSimple>> tagMap = buildSceneTagMap(sceneIds);
+    public SceneListResponse listScenes(SceneListRequest request) {
+        String keyword = request.getKeyword() == null ? "" : request.getKeyword().trim();
+        int page = Math.max(1, request.getPage());
+        int size = Math.min(Math.max(1, request.getSize()), 50);
 
+        // Pinned scenes: always return all, filtered by keyword when provided
+        QueryWrapper<Scene> pinnedQuery = new QueryWrapper<Scene>().eq("pinned", true).orderByAsc("id");
+        if (!keyword.isEmpty()) {
+            pinnedQuery.like("name", keyword);
+        }
+        List<Scene> pinnedScenes = sceneMapper.selectList(pinnedQuery);
+
+        // Non-pinned scenes: paginated + optional keyword filter
+        int offset = (page - 1) * size;
+        List<Scene> otherScenes = sceneMapper.selectOthersPage(keyword, offset, size);
+        Long total = sceneMapper.countOthers(keyword);
+        if (total == null) total = 0L;
+        long totalPages = (total + size - 1) / size;
+
+        // Batch-load tags for all scenes in one query
+        List<Long> allIds = new ArrayList<>();
+        for (Scene s : pinnedScenes) allIds.add(s.getId());
+        for (Scene s : otherScenes) allIds.add(s.getId());
+        Map<Long, List<TagSimple>> tagMap = allIds.isEmpty() ? new HashMap<>() : buildSceneTagMap(allIds);
+
+        SceneListResponse response = new SceneListResponse();
+        response.setPinned(buildSceneResponses(pinnedScenes, tagMap));
+        response.setRecords(buildSceneResponses(otherScenes, tagMap));
+        response.setTotal(total);
+        response.setPage(page);
+        response.setSize(size);
+        response.setTotalPages(totalPages);
+        return response;
+    }
+
+    private List<SceneResponse> buildSceneResponses(List<Scene> scenes, Map<Long, List<TagSimple>> tagMap) {
+        List<SceneResponse> results = new ArrayList<>();
         for (Scene scene : scenes) {
             List<Long> cardIds = cardMapper.selectCardIdsBySceneId(scene.getId());
             long totalCount = cardIds.size();

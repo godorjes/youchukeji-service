@@ -30,8 +30,8 @@ export const api = {
   deleteCard(id) {
     return client.post('/api/cards/delete', { id });
   },
-  scenes() {
-    return client.post('/api/scenes/list', {});
+  scenes(params) {
+    return client.post('/api/scenes/list', params || {});
   },
   scene(id) {
     return client.post('/api/scenes/get', { id });
