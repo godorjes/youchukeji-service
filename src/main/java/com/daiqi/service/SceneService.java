@@ -133,9 +133,13 @@ public class SceneService {
             cardIds.add(card.getId());
         }
         Map<Long, Boolean> checkedMap = new HashMap<>();
+        Map<Long, java.time.LocalDateTime> checkedAtMap = new HashMap<>();
         List<SceneCardCheck> checks = checkMapper.selectByUserSceneCardIds(DEFAULT_USER_ID, sceneId, cardIds);
         for (SceneCardCheck check : checks) {
             checkedMap.put(check.getCardId(), check.isChecked());
+            if (check.isChecked() && check.getUpdatedAt() != null) {
+                checkedAtMap.put(check.getCardId(), check.getUpdatedAt());
+            }
         }
 
         Map<Long, List<TagSimple>> tagMap = buildCardTagMap(cardIds);
@@ -143,7 +147,9 @@ public class SceneService {
         for (Card card : cards) {
             boolean checked = checkedMap.getOrDefault(card.getId(), false);
             List<TagSimple> tags = tagMap.getOrDefault(card.getId(), new ArrayList<>());
-            results.add(new SceneCardResponse(card.getId(), card.getTitle(), tags, checked));
+            SceneCardResponse resp = new SceneCardResponse(card.getId(), card.getTitle(), tags, checked);
+            resp.setLastCheckedAt(checkedAtMap.get(card.getId()));
+            results.add(resp);
         }
         return results;
     }

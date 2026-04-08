@@ -1,5 +1,7 @@
 package com.daiqi.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class SceneCardResponse {
@@ -7,6 +9,9 @@ public class SceneCardResponse {
     private String title;
     private List<TagSimple> tags;
     private boolean checked;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime lastCheckedAt;
 
     public SceneCardResponse() {
     }
@@ -48,5 +53,13 @@ public class SceneCardResponse {
 
     public void setChecked(boolean checked) {
         this.checked = checked;
+    }
+
+    public LocalDateTime getLastCheckedAt() {
+        return lastCheckedAt;
+    }
+
+    public void setLastCheckedAt(LocalDateTime lastCheckedAt) {
+        this.lastCheckedAt = lastCheckedAt;
     }
 }

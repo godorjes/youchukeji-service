@@ -122,6 +122,16 @@
             <button class="icon-btn" @click="backHome">‹</button>
             <button class="icon-btn" @click="resetChecks">⟲</button>
           </header>
+          <div v-if="showResumePrompt" class="resume-prompt">
+            <span class="resume-text">
+              上次已勾选 <b>{{ checkedCount }}</b> 项，还有 <b>{{ sceneCards.length - checkedCount }}</b> 项未勾选
+            </span>
+            <div class="resume-btns">
+              <button class="resume-btn-continue" @click="showResumePrompt = false">继续上次</button>
+              <button class="resume-btn-restart" @click="restartSession">重新开始</button>
+            </div>
+          </div>
+
           <div class="scene-info">
             <div class="emoji big">{{ selectedScene.icon }}</div>
             <div>
@@ -365,7 +375,8 @@ export default {
         { name: '灰色', value: 'bg-gray-500' }
       ],
       recentCardsExpanded: false,
-      pinnedCollapsed: false
+      pinnedCollapsed: false,
+      showResumePrompt: false
     };
   },
   computed: {
@@ -487,6 +498,14 @@ export default {
       this.selectedScene = detail.data;
       const cardsRes = await api.sceneCards(scene.id);
       this.sceneCards = cardsRes.data || [];
+      const checkedCards = this.sceneCards.filter(c => c.checked && c.lastCheckedAt);
+      if (checkedCards.length > 0) {
+        const maxTime = Math.max(...checkedCards.map(c => new Date(c.lastCheckedAt).getTime()));
+        const hoursDiff = (Date.now() - maxTime) / (1000 * 60 * 60);
+        this.showResumePrompt = hoursDiff > 48;
+      } else {
+        this.showResumePrompt = false;
+      }
       this.currentView = 'scene';
     },
     backHome() {
@@ -495,6 +514,14 @@ export default {
       this.sceneCards = [];
       this.sceneSearch = '';
       this.searchResults = null;
+      this.showResumePrompt = false;
+    },
+    async restartSession() {
+      await api.resetChecks(this.selectedScene.id);
+      const cardsRes = await api.sceneCards(this.selectedScene.id);
+      this.sceneCards = cardsRes.data || [];
+      this.showResumePrompt = false;
+      this.fetchScenes();
     },
     percent(scene) {
       if (!scene.totalCount) return 0;

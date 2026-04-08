@@ -500,6 +500,33 @@ body {
   font-size: 13px;
   padding: 28px 0 12px;
 }
+.resume-prompt {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.resume-text { font-size: 12px; color: var(--muted); flex: 1; min-width: 0; line-height: 1.5; }
+.resume-text b { color: var(--yellow); font-weight: 500; }
+.resume-btns { display: flex; gap: 6px; flex-shrink: 0; }
+.resume-btn-continue, .resume-btn-restart {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.resume-btn-continue { background: transparent; border-color: #374151; color: var(--muted); }
+.resume-btn-continue:hover { border-color: #4b5563; color: #d1d5db; }
+.resume-btn-restart { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.35); color: var(--yellow); }
+.resume-btn-restart:hover { background: rgba(245,158,11,0.22); }
 
 .bg-blue-500 { background: rgba(59,130,246,0.25); }
 .bg-purple-500 { background: rgba(168,85,247,0.25); }
