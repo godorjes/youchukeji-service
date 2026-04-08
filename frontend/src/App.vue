@@ -51,8 +51,12 @@
               <div class="section-title">
                 <span class="dot yellow"></span>
                 <span>置顶场景</span>
+                <button class="section-collapse-btn" @click="pinnedCollapsed = !pinnedCollapsed">
+                  {{ pinnedCollapsed ? '展开' : '收起' }}
+                  <span class="expand-arrow">{{ pinnedCollapsed ? '↓' : '↑' }}</span>
+                </button>
               </div>
-              <div class="grid">
+              <div v-if="!pinnedCollapsed" class="grid">
                 <button v-for="scene in scenePinned" :key="scene.id" class="card" @click="openScene(scene)">
                   <div class="progress" :style="{ width: percent(scene) + '%' }"></div>
                   <div class="emoji">{{ scene.icon }}</div>
@@ -97,14 +101,17 @@
               <span>最近卡片</span>
             </div>
             <div class="pill-list">
-              <div v-for="card in recentCards.slice(0, 6)" :key="card.id" class="pill">
+              <div v-for="card in visibleRecentCards" :key="card.id" class="pill">
                 <span class="pill-text">{{ card.title }}</span>
                 <div class="pill-dots">
                   <span v-for="tag in card.tags.slice(0, 2)" :key="tag.id" class="dot" :class="tag.color"></span>
                 </div>
               </div>
-              <div v-if="recentCards.length > 6" class="pill pill-more">
+              <div v-if="recentCards.length > 6 && !recentCardsExpanded" class="pill pill-more pill-toggle" @click="recentCardsExpanded = true">
                 +{{ recentCards.length - 6 }}
+              </div>
+              <div v-if="recentCardsExpanded && recentCards.length > 6" class="pill pill-more pill-toggle" @click="recentCardsExpanded = false">
+                收起
               </div>
             </div>
           </section>
@@ -356,7 +363,9 @@ export default {
         { name: '靛蓝', value: 'bg-indigo-500' },
         { name: '黄色', value: 'bg-yellow-500' },
         { name: '灰色', value: 'bg-gray-500' }
-      ]
+      ],
+      recentCardsExpanded: false,
+      pinnedCollapsed: false
     };
   },
   computed: {
@@ -379,6 +388,9 @@ export default {
     },
     recentCards() {
       return this.cardsPage.records.slice(0, 8);
+    },
+    visibleRecentCards() {
+      return this.recentCardsExpanded ? this.recentCards : this.recentCards.slice(0, 6);
     },
     checkedCount() {
       return this.sceneCards.filter((c) => c.checked).length;

@@ -183,6 +183,8 @@ body {
 }
 .pill-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
 .pill-more { color: var(--muted); font-size: 11px; }
+.pill-toggle { cursor: pointer; transition: background 0.15s, color 0.15s; }
+.pill-toggle:hover { background: #1a2335; color: #d1d5db; }
 .pill-dots { display: flex; gap: 4px; }
 .progress-row {
   display: flex;
@@ -477,6 +479,21 @@ body {
 }
 .expand-btn:hover { border-color: #374151; color: #d1d5db; }
 .expand-arrow { font-size: 11px; }
+.section-collapse-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px dashed #374151;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.section-collapse-btn:hover { border-color: #4b5563; color: #d1d5db; }
 .empty-tip {
   text-align: center;
   color: var(--muted);
