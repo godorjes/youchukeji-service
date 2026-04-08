@@ -57,7 +57,11 @@
                 </button>
               </div>
               <div v-if="!pinnedCollapsed" class="grid">
-                <button v-for="scene in scenePinned" :key="scene.id" class="card" @click="openScene(scene)">
+                <button v-for="scene in scenePinned" :key="scene.id" class="card" @click="openScene(scene)"
+                  @touchstart.passive="startLongPress(scene, 'scene')"
+                  @touchend="cancelLongPress"
+                  @touchmove.passive="cancelLongPress"
+                  @touchcancel="cancelLongPress">
                   <div class="progress" :style="{ width: percent(scene) + '%' }"></div>
                   <div class="emoji">{{ scene.icon }}</div>
                   <div class="title">{{ scene.name }}</div>
@@ -73,16 +77,26 @@
                 <span>其他场景</span>
               </div>
               <div class="list">
-                <button v-for="scene in sceneOthers.records" :key="scene.id" class="list-item" @click="openScene(scene)">
-                  <div class="emoji small">{{ scene.icon }}</div>
-                  <div class="list-main">
-                    <div class="title">{{ scene.name }}</div>
-                    <div class="sub">{{ tagNames(scene.tags) }}</div>
+                <div v-for="scene in sceneOthers.records" :key="scene.id" class="swipe-row"
+                  @touchstart.passive="swipeStart"
+                  @touchend="swipeEnd($event, scene.id)">
+                  <div class="swipe-content" :class="{ 'swipe-open': swipedItemId === scene.id }">
+                    <button class="list-item" @click="handleOtherSceneClick(scene)">
+                      <div class="emoji small">{{ scene.icon }}</div>
+                      <div class="list-main">
+                        <div class="title">{{ scene.name }}</div>
+                        <div class="sub">{{ tagNames(scene.tags) }}</div>
+                      </div>
+                      <div class="count">{{ scene.checkedCount }}/{{ scene.totalCount }}</div>
+                      <span class="chevron">›</span>
+                      <button class="pin-btn pin-inline" @click.stop="togglePin(scene)">📌</button>
+                    </button>
+                    <div class="swipe-btns">
+                      <button class="swipe-btn-edit" @click.stop="openEditScene(scene)">编辑</button>
+                      <button class="swipe-btn-delete" @click.stop="deleteSceneItem(scene)">删除</button>
+                    </div>
                   </div>
-                  <div class="count">{{ scene.checkedCount }}/{{ scene.totalCount }}</div>
-                  <span class="chevron">›</span>
-                  <button class="pin-btn pin-inline" @click.stop="togglePin(scene)">📌</button>
-                </button>
+                </div>
               </div>
               <button v-if="othersRemaining > 0" class="expand-btn" :disabled="sceneOthersLoading" @click="loadMoreScenes">
                 {{ sceneOthersLoading ? '加载中...' : `加载更多 · 还剩 ${othersRemaining} 个` }}
@@ -184,7 +198,7 @@
       <div v-if="showNewCard" class="modal-backdrop top" @click.self="closeNewCard">
         <div class="modal">
           <div class="modal-header">
-            <h3>新建卡片</h3>
+            <h3>{{ editingCard ? '编辑卡片' : '新建卡片' }}</h3>
             <button class="icon-btn" @click="closeNewCard">✕</button>
           </div>
           <div class="form">
@@ -202,7 +216,7 @@
               </button>
             </div>
             <button class="primary" :disabled="!newCardTitle || !selectedNewCardTags.length" @click="createCard">
-              创建卡片
+              {{ editingCard ? '保存' : '创建卡片' }}
             </button>
           </div>
         </div>
@@ -211,7 +225,7 @@
       <div v-if="showNewScene" class="modal-backdrop top" @click.self="closeNewScene">
         <div class="modal">
           <div class="modal-header">
-            <h3>新建场景</h3>
+            <h3>{{ editingScene ? '编辑场景' : '新建场景' }}</h3>
             <button class="icon-btn" @click="closeNewScene">✕</button>
           </div>
           <div class="form">
@@ -243,7 +257,7 @@
               <input type="checkbox" v-model="newScenePinned" /> 置顶到首页
             </label>
             <button class="primary" :disabled="!newSceneName || !selectedNewSceneTags.length" @click="createScene">
-              创建场景
+              {{ editingScene ? '保存' : '创建场景' }}
             </button>
           </div>
         </div>
@@ -252,7 +266,7 @@
       <div v-if="showNewTag" class="modal-backdrop top" @click.self="closeNewTag">
         <div class="modal">
           <div class="modal-header">
-            <h3>新建标签</h3>
+            <h3>{{ editingTag ? '编辑标签' : '新建标签' }}</h3>
             <button class="icon-btn" @click="closeNewTag">✕</button>
           </div>
           <div class="form">
@@ -269,7 +283,7 @@
                 {{ opt.name }}
               </button>
             </div>
-            <button class="primary" :disabled="!isNewTagValid" @click="createTag">创建标签</button>
+            <button class="primary" :disabled="!isNewTagValid" @click="createTag">{{ editingTag ? '保存' : '创建标签' }}</button>
             <div v-if="newTagError" class="form-error">{{ newTagError }}</div>
           </div>
         </div>
@@ -290,6 +304,10 @@
               :key="tag.id"
               :class="['filter-chip', selectedTagFilter === tag.id ? tag.color : '']"
               @click="toggleTagFilter(tag.id)"
+              @touchstart.passive="startLongPress(tag, 'tag')"
+              @touchend="cancelLongPress"
+              @touchmove.passive="cancelLongPress"
+              @touchcancel="cancelLongPress"
             >
               {{ tag.name }} <span>{{ tag.cardCount }}</span>
             </button>
@@ -302,10 +320,20 @@
           </div>
           <div class="list">
             <div class="list-title">{{ selectedTagFilter ? '标签下卡片' : '全部卡片' }} · {{ tagViewCards.length }} 个</div>
-            <div class="list-item" v-for="card in visibleTagViewCards" :key="card.id">
-              <span class="card-text-truncate">{{ card.title }}</span>
-              <div class="tag-row">
-                <span v-for="tag in card.tags" :key="tag.id" class="tag" :class="tag.color">{{ tag.name }}</span>
+            <div v-for="card in visibleTagViewCards" :key="card.id" class="swipe-row"
+              @touchstart.passive="swipeStart"
+              @touchend="swipeEnd($event, card.id)">
+              <div class="swipe-content" :class="{ 'swipe-open': swipedItemId === card.id }">
+                <div class="list-item" @click="handleCardClick(card)">
+                  <span class="card-text-truncate">{{ card.title }}</span>
+                  <div class="tag-row">
+                    <span v-for="tag in card.tags" :key="tag.id" class="tag" :class="tag.color">{{ tag.name }}</span>
+                  </div>
+                </div>
+                <div class="swipe-btns">
+                  <button class="swipe-btn-edit" @click.stop="openEditCard(card)">编辑</button>
+                  <button class="swipe-btn-delete" @click.stop="deleteCardItem(card)">删除</button>
+                </div>
               </div>
             </div>
             <button v-if="tagViewCards.length > 6 && !tagViewExpanded" class="expand-btn" @click="tagViewExpanded = true">
@@ -317,6 +345,15 @@
               <span class="expand-arrow">↑</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      <div v-if="showActionSheet" class="action-backdrop" @click.self="showActionSheet = false">
+        <div class="action-sheet">
+          <div class="action-sheet-title">{{ actionSheetItem ? (actionSheetItem.name || actionSheetItem.title || '') : '' }}</div>
+          <button class="action-sheet-btn" @click="handleActionEdit">编辑</button>
+          <button class="action-sheet-btn danger" @click="handleActionDelete">删除</button>
+          <button class="action-sheet-cancel" @click="showActionSheet = false">取消</button>
         </div>
       </div>
 
@@ -376,7 +413,17 @@ export default {
       ],
       recentCardsExpanded: false,
       pinnedCollapsed: false,
-      showResumePrompt: false
+      showResumePrompt: false,
+      swipedItemId: null,
+      touchStartX: 0,
+      touchStartY: 0,
+      longPressTimer: null,
+      showActionSheet: false,
+      actionSheetItem: null,
+      actionSheetType: null,
+      editingScene: null,
+      editingTag: null,
+      editingCard: null
     };
   },
   computed: {
@@ -395,7 +442,7 @@ export default {
       return this.tagViewExpanded ? this.tagViewCards : this.tagViewCards.slice(0, 6);
     },
     anyModal() {
-      return this.showCreateMenu || this.showNewCard || this.showNewScene || this.showNewTag || this.showTagView;
+      return this.showCreateMenu || this.showNewCard || this.showNewScene || this.showNewTag || this.showTagView || this.showActionSheet;
     },
     recentCards() {
       return this.cardsPage.records.slice(0, 8);
@@ -544,6 +591,7 @@ export default {
       this.showNewCard = false;
       this.newCardTitle = '';
       this.selectedNewCardTags = [];
+      this.editingCard = null;
     },
     openNewScene() {
       this.closeCreateMenu();
@@ -552,8 +600,10 @@ export default {
     closeNewScene() {
       this.showNewScene = false;
       this.newSceneName = '';
+      this.newSceneIcon = '🎒';
       this.selectedNewSceneTags = [];
       this.newScenePinned = false;
+      this.editingScene = null;
     },
     openNewTag() {
       this.closeCreateMenu();
@@ -566,6 +616,7 @@ export default {
       this.showNewTag = false;
       this.newTagName = '';
       this.newTagError = '';
+      this.editingTag = null;
     },
     openTagView() {
       this.showTagView = true;
@@ -595,22 +646,40 @@ export default {
         return;
       }
       this.newTagError = '';
-      await api.createTag({ name, color: this.newTagColor });
+      if (this.editingTag) {
+        await api.updateTag({ id: this.editingTag.id, name, color: this.newTagColor });
+      } else {
+        await api.createTag({ name, color: this.newTagColor });
+      }
       this.closeNewTag();
       await this.refreshAll();
     },
     async createCard() {
-      await api.createCard({ title: this.newCardTitle, tagIds: this.selectedNewCardTags });
+      if (this.editingCard) {
+        await api.updateCard({ id: this.editingCard.id, title: this.newCardTitle, tagIds: this.selectedNewCardTags });
+      } else {
+        await api.createCard({ title: this.newCardTitle, tagIds: this.selectedNewCardTags });
+      }
       this.closeNewCard();
       await this.refreshAll();
     },
     async createScene() {
-      await api.createScene({
-        name: this.newSceneName,
-        icon: this.newSceneIcon,
-        pinned: this.newScenePinned,
-        tagIds: this.selectedNewSceneTags
-      });
+      if (this.editingScene) {
+        await api.updateScene({
+          id: this.editingScene.id,
+          name: this.newSceneName,
+          icon: this.newSceneIcon,
+          pinned: this.newScenePinned,
+          tagIds: this.selectedNewSceneTags
+        });
+      } else {
+        await api.createScene({
+          name: this.newSceneName,
+          icon: this.newSceneIcon,
+          pinned: this.newScenePinned,
+          tagIds: this.selectedNewSceneTags
+        });
+      }
       this.closeNewScene();
       await this.fetchScenes(1);
     },
@@ -635,6 +704,95 @@ export default {
       };
       await api.updateScene(payload);
       await this.fetchScenes(1);
+    },
+    swipeStart(e) {
+      this.touchStartX = e.touches[0].clientX;
+      this.touchStartY = e.touches[0].clientY;
+    },
+    swipeEnd(e, id) {
+      const dx = e.changedTouches[0].clientX - this.touchStartX;
+      const dy = e.changedTouches[0].clientY - this.touchStartY;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx < -50) {
+          this.swipedItemId = id;
+        } else if (dx > 20) {
+          this.swipedItemId = null;
+        }
+      }
+    },
+    startLongPress(item, type) {
+      this.longPressTimer = setTimeout(() => {
+        this.actionSheetItem = item;
+        this.actionSheetType = type;
+        this.showActionSheet = true;
+      }, 500);
+    },
+    cancelLongPress() {
+      if (this.longPressTimer) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+      }
+    },
+    handleActionEdit() {
+      this.showActionSheet = false;
+      if (this.actionSheetType === 'scene') this.openEditScene(this.actionSheetItem);
+      else if (this.actionSheetType === 'tag') this.openEditTag(this.actionSheetItem);
+      else if (this.actionSheetType === 'card') this.openEditCard(this.actionSheetItem);
+    },
+    async handleActionDelete() {
+      this.showActionSheet = false;
+      if (this.actionSheetType === 'scene') await this.deleteSceneItem(this.actionSheetItem);
+      else if (this.actionSheetType === 'tag') await this.deleteTagItem(this.actionSheetItem);
+      else if (this.actionSheetType === 'card') await this.deleteCardItem(this.actionSheetItem);
+    },
+    openEditScene(scene) {
+      this.swipedItemId = null;
+      this.editingScene = scene;
+      this.newSceneName = scene.name;
+      this.newSceneIcon = scene.icon;
+      this.selectedNewSceneTags = (scene.tags || []).map(t => t.id);
+      this.newScenePinned = scene.pinned;
+      this.showNewScene = true;
+    },
+    openEditTag(tag) {
+      this.editingTag = tag;
+      this.newTagName = tag.name;
+      this.newTagColor = tag.color;
+      this.newTagError = '';
+      this.showNewTag = true;
+    },
+    openEditCard(card) {
+      this.swipedItemId = null;
+      this.editingCard = card;
+      this.newCardTitle = card.title;
+      this.selectedNewCardTags = (card.tags || []).map(t => t.id);
+      this.showNewCard = true;
+    },
+    async deleteSceneItem(scene) {
+      this.swipedItemId = null;
+      await api.deleteScene(scene.id);
+      await this.fetchScenes(1);
+    },
+    async deleteTagItem(tag) {
+      await api.deleteTag(tag.id);
+      await this.refreshAll();
+    },
+    async deleteCardItem(card) {
+      this.swipedItemId = null;
+      await api.deleteCard(card.id);
+      await this.fetchCards();
+    },
+    handleOtherSceneClick(scene) {
+      if (this.swipedItemId === scene.id) {
+        this.swipedItemId = null;
+        return;
+      }
+      this.openScene(scene);
+    },
+    handleCardClick(card) {
+      if (this.swipedItemId === card.id) {
+        this.swipedItemId = null;
+      }
     }
   }
 };
