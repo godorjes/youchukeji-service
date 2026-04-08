@@ -84,6 +84,10 @@
                 {{ sceneOthersLoading ? '加载中...' : `加载更多 · 还剩 ${othersRemaining} 个` }}
                 <span v-if="!sceneOthersLoading" class="expand-arrow">↓</span>
               </button>
+              <button v-if="sceneOthers.page > 1" class="expand-btn" @click="collapseScenes">
+                收起
+                <span class="expand-arrow">↑</span>
+              </button>
             </section>
           </template>
 
@@ -93,11 +97,14 @@
               <span>最近卡片</span>
             </div>
             <div class="pill-list">
-              <div v-for="card in recentCards" :key="card.id" class="pill">
-                <span>{{ card.title }}</span>
+              <div v-for="card in recentCards.slice(0, 6)" :key="card.id" class="pill">
+                <span class="pill-text">{{ card.title }}</span>
                 <div class="pill-dots">
                   <span v-for="tag in card.tags.slice(0, 2)" :key="tag.id" class="dot" :class="tag.color"></span>
                 </div>
+              </div>
+              <div v-if="recentCards.length > 6" class="pill pill-more">
+                +{{ recentCards.length - 6 }}
               </div>
             </div>
           </section>
@@ -262,22 +269,36 @@
           </div>
           <div class="tag-filter">
             <button
-              v-for="tag in tags"
+              v-for="tag in visibleFilterTags"
               :key="tag.id"
               :class="['filter-chip', selectedTagFilter === tag.id ? tag.color : '']"
               @click="toggleTagFilter(tag.id)"
             >
               {{ tag.name }} <span>{{ tag.cardCount }}</span>
             </button>
+            <button v-if="tags.length > 6 && !tagFilterExpanded" class="filter-chip filter-more" @click="tagFilterExpanded = true">
+              +{{ tags.length - 6 }} 个标签
+            </button>
+            <button v-if="tagFilterExpanded && tags.length > 6" class="filter-chip filter-more" @click="tagFilterExpanded = false">
+              收起
+            </button>
           </div>
           <div class="list">
-            <div class="list-title">{{ selectedTagFilter ? '标签下卡片' : '全部卡片' }}</div>
-            <div class="list-item" v-for="card in tagViewCards" :key="card.id">
-              <span>{{ card.title }}</span>
+            <div class="list-title">{{ selectedTagFilter ? '标签下卡片' : '全部卡片' }} · {{ tagViewCards.length }} 个</div>
+            <div class="list-item" v-for="card in visibleTagViewCards" :key="card.id">
+              <span class="card-text-truncate">{{ card.title }}</span>
               <div class="tag-row">
                 <span v-for="tag in card.tags" :key="tag.id" class="tag" :class="tag.color">{{ tag.name }}</span>
               </div>
             </div>
+            <button v-if="tagViewCards.length > 6 && !tagViewExpanded" class="expand-btn" @click="tagViewExpanded = true">
+              展开全部 {{ tagViewCards.length }} 条
+              <span class="expand-arrow">↓</span>
+            </button>
+            <button v-if="tagViewExpanded && tagViewCards.length > 6" class="expand-btn" @click="tagViewExpanded = false">
+              收起
+              <span class="expand-arrow">↑</span>
+            </button>
           </div>
         </div>
       </div>
@@ -321,6 +342,8 @@ export default {
       newTagColor: 'bg-blue-500',
       newTagError: '',
       selectedTagFilter: null,
+      tagFilterExpanded: false,
+      tagViewExpanded: false,
       emojiOptions: ['🚪', '✈️', '💼', '🏃', '🌴', '🎒', '🏕️', '🎉', '📌', '📦', '🎧', '🧳', '🚲', '🧼', '📷'],
       tagColorOptions: [
         { name: '蓝色', value: 'bg-blue-500' },
@@ -340,6 +363,17 @@ export default {
     othersRemaining() {
       return Math.max(0, this.sceneOthers.total - this.sceneOthers.records.length);
     },
+    visibleFilterTags() {
+      return this.tagFilterExpanded ? this.tags : this.tags.slice(0, 6);
+    },
+    tagViewCards() {
+      return this.cardsPage.records.filter(
+        (c) => !this.selectedTagFilter || c.tags.some((t) => t.id === this.selectedTagFilter)
+      );
+    },
+    visibleTagViewCards() {
+      return this.tagViewExpanded ? this.tagViewCards : this.tagViewCards.slice(0, 6);
+    },
     anyModal() {
       return this.showCreateMenu || this.showNewCard || this.showNewScene || this.showNewTag || this.showTagView;
     },
@@ -348,11 +382,6 @@ export default {
     },
     checkedCount() {
       return this.sceneCards.filter((c) => c.checked).length;
-    },
-    tagViewCards() {
-      return this.cardsPage.records.filter(
-        (c) => !this.selectedTagFilter || c.tags.some((t) => t.id === this.selectedTagFilter)
-      );
     },
     isNewTagValid() {
       return this.newTagName.trim().length > 0;
@@ -416,6 +445,10 @@ export default {
       }
       this.sceneOthers.total = data.total || 0;
       this.sceneOthers.page = data.page || page;
+    },
+    collapseScenes() {
+      this.sceneOthers.records = this.sceneOthers.records.slice(0, this.sceneOthers.size);
+      this.sceneOthers.page = 1;
     },
     async loadMoreScenes() {
       if (this.sceneOthersLoading) return;
@@ -514,6 +547,7 @@ export default {
     },
     toggleTagFilter(id) {
       this.selectedTagFilter = this.selectedTagFilter === id ? null : id;
+      this.tagViewExpanded = false;
     },
     async createTag() {
       const name = this.newTagName.trim();

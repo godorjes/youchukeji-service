@@ -147,8 +147,8 @@ body {
 .emoji { font-size: 22px; }
 .emoji.small { font-size: 18px; }
 .emoji.big { font-size: 28px; }
-.title { font-size: 14px; margin-top: 6px; }
-.sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.title { font-size: 14px; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub { font-size: 12px; color: var(--muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list {
   display: flex;
   flex-direction: column;
@@ -181,6 +181,8 @@ body {
   gap: 8px;
   font-size: 12px;
 }
+.pill-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
+.pill-more { color: var(--muted); font-size: 11px; }
 .pill-dots { display: flex; gap: 4px; }
 .progress-row {
   display: flex;
@@ -415,6 +417,8 @@ body {
 }
 .filter-chip:hover { background: #1a2335; border-color: #374151; }
 .filter-chip span { opacity: .7; margin-left: 6px; }
+.filter-more { color: var(--muted); border-style: dashed; }
+.card-text-truncate { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
 .list-title { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
 .switch-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 
