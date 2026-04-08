@@ -2,9 +2,9 @@
   <div class="page">
     <div class="phone">
       <div class="status-bar">
-        <span>9:41</span>
+        <span>{{ currentTime }}</span>
         <div class="status-icons">
-          <div class="battery"><div class="battery-fill"></div></div>
+          <div class="battery"><div class="battery-fill" :style="{ width: batteryLevel + '%' }"></div></div>
         </div>
       </div>
 
@@ -261,6 +261,8 @@ export default {
   name: 'App',
   data() {
     return {
+      currentTime: '',
+      batteryLevel: 75,
       currentView: 'home',
       tags: [],
       cardsPage: { records: [], total: 0, totalPages: 0, page: 1, size: 20 },
@@ -323,9 +325,31 @@ export default {
     }
   },
   mounted() {
+    this.updateTime();
+    this._timeTimer = setInterval(this.updateTime, 1000);
+    this.syncBattery();
     this.refreshAll();
   },
+  beforeDestroy() {
+    clearInterval(this._timeTimer);
+  },
   methods: {
+    updateTime() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      this.currentTime = `${h}:${m}`;
+    },
+    async syncBattery() {
+      if (!('getBattery' in navigator)) return;
+      try {
+        const battery = await navigator.getBattery();
+        this.batteryLevel = Math.round(battery.level * 100);
+        battery.addEventListener('levelchange', () => {
+          this.batteryLevel = Math.round(battery.level * 100);
+        });
+      } catch (e) { /* keep default */ }
+    },
     async refreshAll() {
       await Promise.all([this.fetchTags(), this.fetchScenes(), this.fetchCards()]);
     },
