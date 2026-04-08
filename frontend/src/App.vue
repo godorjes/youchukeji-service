@@ -20,42 +20,78 @@
             </button>
           </header>
 
-          <section v-if="pinnedScenes.length" class="section">
-            <div class="section-title">
-              <span class="dot yellow"></span>
-              <span>置顶场景</span>
-            </div>
-            <div class="grid">
-              <button v-for="scene in pinnedScenes" :key="scene.id" class="card" @click="openScene(scene)">
-                <div class="progress" :style="{ width: percent(scene) + '%' }"></div>
-                <div class="emoji">{{ scene.icon }}</div>
-                <div class="title">{{ scene.name }}</div>
-                <div class="sub">{{ scene.checkedCount }}/{{ scene.totalCount }} 已确认</div>
-                <button class="pin pin-btn" @click.stop="togglePin(scene)">📌</button>
-              </button>
-            </div>
-          </section>
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input v-model="sceneSearch" class="search-input" placeholder="搜索场景..." />
+            <button v-if="sceneSearch" class="search-clear" @click="sceneSearch = ''">✕</button>
+          </div>
 
-          <section class="section">
-            <div class="section-title">
-              <span class="dot gray"></span>
-              <span>其他场景</span>
-            </div>
-            <div class="list">
-              <button v-for="scene in otherScenes" :key="scene.id" class="list-item" @click="openScene(scene)">
-                <div class="emoji small">{{ scene.icon }}</div>
-                <div class="list-main">
+          <template v-if="filteredScenes !== null">
+            <section class="section">
+              <div class="section-title">
+                <span>搜索结果 · {{ filteredScenes.length }} 个</span>
+              </div>
+              <div v-if="filteredScenes.length" class="list">
+                <button v-for="scene in filteredScenes" :key="scene.id" class="list-item" @click="openScene(scene)">
+                  <div class="emoji small">{{ scene.icon }}</div>
+                  <div class="list-main">
+                    <div class="title">{{ scene.name }}</div>
+                    <div class="sub">{{ tagNames(scene.tags) }}</div>
+                  </div>
+                  <div class="count">{{ scene.checkedCount }}/{{ scene.totalCount }}</div>
+                  <span class="chevron">›</span>
+                </button>
+              </div>
+              <div v-else class="empty-tip">未找到匹配的场景</div>
+            </section>
+          </template>
+
+          <template v-else>
+            <section v-if="pinnedScenes.length" class="section">
+              <div class="section-title">
+                <span class="dot yellow"></span>
+                <span>置顶场景</span>
+              </div>
+              <div class="grid">
+                <button v-for="scene in pinnedScenes" :key="scene.id" class="card" @click="openScene(scene)">
+                  <div class="progress" :style="{ width: percent(scene) + '%' }"></div>
+                  <div class="emoji">{{ scene.icon }}</div>
                   <div class="title">{{ scene.name }}</div>
-                  <div class="sub">{{ tagNames(scene.tags) }}</div>
-                </div>
-                <div class="count">{{ scene.checkedCount }}/{{ scene.totalCount }}</div>
-                <span class="chevron">›</span>
-                <button class="pin-btn pin-inline" @click.stop="togglePin(scene)">📌</button>
-              </button>
-            </div>
-          </section>
+                  <div class="sub">{{ scene.checkedCount }}/{{ scene.totalCount }} 已确认</div>
+                  <button class="pin pin-btn" @click.stop="togglePin(scene)">📌</button>
+                </button>
+              </div>
+            </section>
 
-          <section class="section">
+            <section v-if="otherScenes.length" class="section">
+              <div class="section-title">
+                <span class="dot gray"></span>
+                <span>其他场景</span>
+              </div>
+              <div class="list">
+                <button v-for="scene in visibleOtherScenes" :key="scene.id" class="list-item" @click="openScene(scene)">
+                  <div class="emoji small">{{ scene.icon }}</div>
+                  <div class="list-main">
+                    <div class="title">{{ scene.name }}</div>
+                    <div class="sub">{{ tagNames(scene.tags) }}</div>
+                  </div>
+                  <div class="count">{{ scene.checkedCount }}/{{ scene.totalCount }}</div>
+                  <span class="chevron">›</span>
+                  <button class="pin-btn pin-inline" @click.stop="togglePin(scene)">📌</button>
+                </button>
+              </div>
+              <button v-if="otherScenes.length > 4 && !scenesExpanded" class="expand-btn" @click="scenesExpanded = true">
+                查看全部 {{ otherScenes.length }} 个场景
+                <span class="expand-arrow">↓</span>
+              </button>
+              <button v-if="scenesExpanded && otherScenes.length > 4" class="expand-btn" @click="scenesExpanded = false">
+                收起
+                <span class="expand-arrow collapse">↑</span>
+              </button>
+            </section>
+          </template>
+
+          <section v-if="filteredScenes === null" class="section">
             <div class="section-title">
               <span class="dot gray"></span>
               <span>最近卡片</span>
@@ -264,6 +300,8 @@ export default {
       currentTime: '',
       batteryLevel: 75,
       currentView: 'home',
+      sceneSearch: '',
+      scenesExpanded: false,
       tags: [],
       cardsPage: { records: [], total: 0, totalPages: 0, page: 1, size: 20 },
       scenes: [],
@@ -305,6 +343,15 @@ export default {
     },
     otherScenes() {
       return this.scenes.filter((s) => !s.pinned);
+    },
+    filteredScenes() {
+      const q = this.sceneSearch.trim().toLowerCase();
+      if (!q) return null;
+      return this.scenes.filter((s) => s.name.toLowerCase().includes(q));
+    },
+    visibleOtherScenes() {
+      if (this.scenesExpanded) return this.otherScenes;
+      return this.otherScenes.slice(0, 4);
     },
     anyModal() {
       return this.showCreateMenu || this.showNewCard || this.showNewScene || this.showNewTag || this.showTagView;
@@ -376,6 +423,8 @@ export default {
       this.currentView = 'home';
       this.selectedScene = null;
       this.sceneCards = [];
+      this.sceneSearch = '';
+      this.scenesExpanded = false;
     },
     percent(scene) {
       if (!scene.totalCount) return 0;
