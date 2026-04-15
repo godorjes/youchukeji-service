@@ -1,13 +1,13 @@
 spring:
   datasource:
-    url: ${MYSQL_URL}
+    url: jdbc:${MYSQL_URL}
     username: ${MYSQLUSER}
     password: ${MYSQLPASSWORD}
 
   redis:
     host: ${REDISHOST}
     port: ${REDISPORT}
-    password: ${REDISPASSWORD}
+    password: ${REDIS_PASSWORD}
 
   cache:
     type: redis
