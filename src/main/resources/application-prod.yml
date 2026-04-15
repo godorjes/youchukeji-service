@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: ${MYSQL_URL}
+    username: ${MYSQLUSER}
+    password: ${MYSQLPASSWORD}
+
+  redis:
+    host: ${REDISHOST}
+    port: ${REDISPORT}
+    password: ${REDISPASSWORD}
+
+  cache:
+    type: redis
