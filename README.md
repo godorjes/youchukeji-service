@@ -8,6 +8,7 @@
 
 <div class="preview">
   <h1>🧳 带齐 —— 场景化标签清单工具</h1>
+  <h1>https://youchukeji-service-production.up.railway.app/</h1>
   <blockquote>用标签组合场景，告别层级结构。一款面向个人的场景化物品确认清单应用。</blockquote>
   <div class="badge-row">
     <span class="badge badge-vue">Vue 2.7</span>
